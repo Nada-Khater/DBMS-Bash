@@ -1,5 +1,4 @@
 #!/bin/sh
-
 create_db() {
     read -p "Enter Database Name: " dbname
     if $( validate_dbname "$dbname" ) && ! [[ "$dbname" =~ [[:space:]] ]] 
@@ -26,16 +25,14 @@ connect_db() {
     read -p "Enter Database Name: " dbname
     if $( validate_dbname "$dbname" ) && ! [[ "$dbname" =~ [[:space:]] ]]
     then
-        if [[ -e $dbname ]]
+        if [[ -e $dbname  && -d $dbname ]]
         then
-            cd "./$dbname"
-            pwd
-            cd /home/heba/DBMS-Bash
-            ./tabel.sh tabel_menu
+            source ./tabel.sh 
+                tabel_menu
             echo "$dbname Database connected Successfully"
 
         else
-            echo "Error!, Database Not Exists!"
+            echo "Error!, Database Not Exists! Or It Should Be A Directory"
         fi
     else
         echo "Invalid Database Name, Enter a Valid Name."
@@ -46,7 +43,7 @@ drop_db(){
     read -p "Enter Database Name: " dbname
     if $( validate_dbname "$dbname" ) && ! [[ "$dbname" =~ [[:space:]] ]]
     then
-        if [[ -e $dbname ]]
+        if [[ -e $dbname && -d $dbname ]]
         then
             rm -r $dbname
             echo "$dbname Database Deleted Successfully"

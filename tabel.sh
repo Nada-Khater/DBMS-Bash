@@ -1,7 +1,7 @@
 #!/bin/sh
 tabel_menu()
 {
-select choice in "Create table" "List table" "Select From Table" "Drop Table" "Delete From Table" "Update Table" "Insert Into Table" "Back To Main Menu" "Exit";  
+select choice in "Create table" "List table" "Select From Table" "Drop Table" "Delete From Table" "Update Table" "Insert Into Table" "Back To Main Menu" ;  
 do
     case $REPLY in
         1) create_table ;;
@@ -12,7 +12,6 @@ do
         6) update_table;;
         7) insert_into_table;;
         8) back_to_menu;;
-        9) echo "Exiting..."; break ;;
         *) echo "Invalid Choice! Choose option between 1 to 5." ;;
     esac
 done
@@ -20,6 +19,8 @@ done
 }
 
 create_table(){
+         
+         touch file
 
         echo "implement here"
 }
@@ -42,7 +43,7 @@ delete_table(){
 }
 update_table(){
 
-        echo "implement here"
+        echo "$dbname"
 }
 insert_into_table()
 {
@@ -52,6 +53,7 @@ back_to_menu()
 {
    cd /home/heba/DBMS-Bash
    ./dbms.sh main_menu
+   exit
 }
 
 tabel_menu
