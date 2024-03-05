@@ -9,7 +9,7 @@ create_db() {
             echo "Error! Duplicated Database Name, Database Already Exists!"
         else
             mkdir "./$dbname"
-            cd $dbname 
+            #cd $dbname 
             echo "$dbname Database Created Successfully"
         fi
     else
@@ -23,11 +23,39 @@ list_db() {
 }
 
 connect_db() {
-    echo "Function Implementation Here"
+    read -p "Enter Database Name: " dbname
+    if $( validate_dbname "$dbname" ) && ! [[ "$dbname" =~ [[:space:]] ]]
+    then
+        if [[ -e $dbname ]]
+        then
+            cd "./$dbname"
+            pwd
+            cd /home/heba/DBMS-Bash
+            ./tabel.sh tabel_menu
+            echo "$dbname Database connected Successfully"
+
+        else
+            echo "Error!, Database Not Exists!"
+        fi
+    else
+        echo "Invalid Database Name, Enter a Valid Name."
+    fi
 }
 
 drop_db(){
-    echo "Function Implementation Here"
+    read -p "Enter Database Name: " dbname
+    if $( validate_dbname "$dbname" ) && ! [[ "$dbname" =~ [[:space:]] ]]
+    then
+        if [[ -e $dbname ]]
+        then
+            rm -r $dbname
+            echo "$dbname Database Deleted Successfully"
+        else
+            echo "Error!, Database Not Exists!"
+        fi
+    else
+        echo "Invalid Database Name, Enter a Valid Name."
+    fi
 }
 
 # Ensures that the dbname is non zero length and not null
@@ -35,6 +63,9 @@ validate_dbname() {
   [[ -n "$1" && "$1" =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]]
 }
 
+
+main_menu()
+{
 select choice in "Create Database" "List Databases" "Connect To Databases" "Drop Database" "Exit"; 
 do
     case $REPLY in
@@ -46,3 +77,6 @@ do
         *) echo "Invalid Choice! Choose option between 1 to 5." ;;
     esac
 done
+}
+
+main_menu
