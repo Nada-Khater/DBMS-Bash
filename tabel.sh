@@ -119,11 +119,40 @@ list_table(){
     echo "implement here"
 }
 
-select_table(){
-    echo "implement here"
+drop_table() {
+    while true
+    do
+        if [ -z "$(ls -A "./$dbname")" ]
+        then
+            echo "No tables found in the database."
+            break
+        fi
+        
+        echo "Tables in the database:"
+        list_table
+        
+        read -p "Enter name of table to drop: " tbname
+        case $tbname in
+            # Check if tbname is not empty or contain any special characters
+            *[!\ \/\\\*\-\+\#\$\%\^\&\*0-9]*) 
+                if [[ -f "./$dbname/$tbname" ]]
+                then
+                    rm "./$dbname/$tbname"
+                    rm "./$dbname/metadata_$tbname"
+                    echo "Table '$tbname' dropped successfully."
+                    break
+                else
+                    echo "Table '$tbname' not found! Enter a valid table name."
+                fi
+                ;;
+            *)
+                echo "Invalid input! Enter a valid table name."
+                ;;
+        esac
+    done
 }
 
-drop_table(){
+select_table(){
     echo "implement here"
 }
 
