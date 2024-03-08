@@ -116,7 +116,7 @@ create_table() {
 }
 
 list_table(){
-    echo "implement here"
+    ls ./$dbname | grep -v "^metadata_"
 }
 
 drop_table() {
@@ -129,7 +129,7 @@ drop_table() {
         fi
         
         echo "Tables in the database:"
-        list_table
+        ls ./$dbname | grep -v "^metadata_"
         
         read -p "Enter name of table to drop: " tbname
         case $tbname in
@@ -164,12 +164,69 @@ update_table(){
     echo "$dbname"
 }
 
-insert_into_table(){
-    echo "implement here"
+insert_into_table() {
+    echo "Available tables in $dbname"
+    ls ./$dbname | grep -v "^metadata_"
+    read -p "Enter table Name: " tbname
+    echo "Selected table: $tbname"  
+    if [[ -f ./$dbname/$tbname ]]; then
+        record_values=()
+        columns=($(cut -d ':' -f 1 ./$dbname/metadata_$tbname))
+        constraints=($(cut -d ':' -f 2 ./$dbname/metadata_$tbname))
+        primary_keys=($(cut -d ':' -f 3 ./$dbname/metadata_$tbname))
+
+        for ((i=0; i<${#columns[@]}; i++))
+        do
+            field="${columns[$i]}"
+            while true
+            do
+                read -p "Enter $field Value: " value
+                
+                # Check if it's a primary key
+                if [[ "${primary_keys[$i]}" == "1" ]]
+                then
+                    if  [ $(grep -c "$value:" ./$dbname/$tbname) -gt 0 ]
+                    then
+                        echo "Primary key value already exists. Please enter a unique value."
+                        continue
+                    fi
+                fi
+                
+                # Check constraints
+                if [[ "${constraints[$i]}" == "int" ]]
+                then 
+                    if ! [[ "$value" =~ ^[0-9]+$ ]]
+                    then
+                        echo "Enter a valid number"
+                        continue
+                    fi
+                    
+                elif [[ "${constraints[$i]}" == "str" ]]
+                then 
+                    if ! validate_name "$value" || [[ "$value" =~ [[:space:]] ]]
+                    then
+                        echo "Enter a valid string, shouldn't contain space"
+                        continue
+                    fi
+                fi
+                
+                # If all checks pass, break out of the loop
+                break
+            done
+            
+            record_values+=":$value"
+        done  
+
+        echo ${record_values:1} >> ./$dbname/$tbname
+        echo "Data Entered Successfully"
+    else
+        echo "Data file does not exist or is not accessible."
+    fi
 }
 
+
 back_to_menu(){
-    cd /home/heba/DBMS-Bash
+
     ./dbms.sh main_menu
     exit
 }
