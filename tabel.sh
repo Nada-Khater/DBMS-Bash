@@ -476,20 +476,119 @@ select_table(){
 }
 
 update_table(){
-     echo "Choose the table you want to select from:"
+    echo "Choose the table you want to update it:"
     list_table
     while true
     do
-        read -p "Please enter your choice " selected_tbname
-        if validate_name "$selected_tbname" && ! [[ "$selected_tbname" =~ [[:space:]] ]] 
+        read -p "Please enter your choice " updated_tbname
+        if validate_name "$updated_tbname" && ! [[ "$updated_tbname" =~ [[:space:]] ]] 
         then
-            if [[ -f ./$dbname/$selected_tbname ]] 
+            if [[ -f ./$dbname/$updated_tbname ]] 
             then
-                select choice in "Update cell in table $selected_tbname" "Update Column in table $selected_tbname"  " Back "
+                select choice in "Update by field in table $updated_tbname" "Update Column in table $updated_tbname"  " Back "
                 do
                     case $REPLY in
                         1)
-                            echo "implement here"
+                            echo "Choose a column from $updated_tbname"
+                            max_col=$(cut -d ':' -f 1 ./$dbname/metadata_$updated_tbname | wc -l) 
+                            echo "Available columns in $updated_tbname:"
+                            cut -d ':' -f 1 ./$dbname/metadata_$updated_tbname | cat -n
+                            while true; do
+                                
+                                read -p "Enter column number you want to select: " updated_col
+
+                                if ! [[ "$updated_col" =~ ^[0-9]+$ ]]; then
+                                    echo "Invalid input, enter a number."
+                                    continue
+                                fi
+
+                                if [[ "$updated_col" -lt 1 || "$updated_col" -gt "$max_col" ]]; then
+                                    echo "Column number is out of range. Please select a column between 1 and $max_col."
+                                    continue
+                                fi
+                                
+                                type=$(cat -n ./$dbname/metadata_$updated_tbname | grep "^[[:space:]]*$updated_col" | cut -d ':' -f 2)
+                                pk=$(cat -n ./$dbname/metadata_$updated_tbname | grep "^[[:space:]]*$updated_col" | cut -d ':' -f 3)
+
+                                while true
+                                do
+                                    read -p "Enter value for the column. Note: data type of column is $type: " oldvalue
+
+                                    if [[ "$type" == "str" ]]; then 
+                                        if ! validate_name "$oldvalue" || [[ "$oldvalue" =~ [[:space:]] ]]; then
+                                            echo "Enter a valid string, shouldn't contain space or special character and shouldn't be empty."
+                                            continue
+                                        fi
+                                    elif [[ "$type" == "int" ]]; then
+                                        if ! [[ "$oldvalue" =~ ^[0-9]+$ ]]; then
+                                            echo "Enter a valid number, shouldn't be empty or containing space or special character."
+                                            continue
+                                        fi
+                                    else 
+                                        echo "Invalid input."
+                                        continue
+                                    fi   
+                                break
+                                done 
+
+                                lineunm=$(grep -c "$oldvalue" ./$dbname/$updated_tbname)
+
+                                if [ "$lineunm" -lt 1 ]; then 
+                                    echo "The value you entered doesn't exist in the table."
+                                else 
+                                    while true; do
+                                        read -p "Enter the new value of $updated_col: " newvalue
+
+                                        if [[ "$type" == "str" ]]; then 
+                                          
+                                            if ! validate_name "$newvalue" || [[ "$newvalue" =~ [[:space:]] ]]; then
+                                                echo "Enter a valid string, shouldn't contain space or special character and shouldn't be empty."
+                                                continue
+                                            fi
+                                        elif [[ "$type" == "int" ]]; then 
+                                           
+                                            if ! [[ "$newvalue" =~ ^[0-9]+$ ]]; then
+                                                echo "Enter a valid number, shouldn't be empty or containing space or special character."
+                                                continue
+                                            fi
+                                        else
+                                            echo "Invalid data type. Please enter 'str' or 'int'."
+                                            continue
+                                        fi
+
+                                        if [[ "$pk" == "1" ]]; then
+                                            if [[ "$oldvalue" == "$newvalue" ]]; then
+                                            echo "No change detected in primary key value. Update ignored."
+                                            continue
+                                            fi
+                                            if [[ "$type" == "int" ]]; then
+                                                if ! [[ "$newvalue" =~ ^[1-9][0-9]*$ ]]; then 
+                                                echo "Primary key value should be a positive non-zero integer."
+                                                continue
+                                                fi
+                                            elif [[ "$type" == "str" ]]; then
+                                                if [[ -z "$newvalue" ]] || [[ "$newvalue" =~ [Nn][Uu][Ll][Ll] ]]; then 
+                                                echo "String value cannot be null."
+                                                continue
+                                                fi
+                                            fi
+                                            if grep -qw "$newvalue" ./$dbname/$updated_tbname; then
+                                                echo "Primary key value already exists. Please enter a unique value."
+                                                continue
+                                            fi
+
+                                        fi
+
+                                        sed -i "s/$oldvalue/$newvalue/" ./$dbname/$updated_tbname
+                                        echo "Record updated successfully"
+
+                                        break
+                                    done
+                                fi
+                                echo "select another choice from pdate list"
+                                break
+                            done
+
                             ;;
                         2)
                             echo "implement here"
