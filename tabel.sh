@@ -17,6 +17,7 @@ tabel_menu(){
     done
 }
 
+# ******************************** Create Table FN  ********************************
 create_table() {
     while true 
     do
@@ -115,15 +116,18 @@ create_table() {
     done
 }
 
+# ******************************** List Table FN ********************************
 list_table(){
     if [  $(ls ./$dbname | grep -v "^metadata_" | wc -l ) -gt 0 ]
-    then 
+    then
+        echo "Available Tables: " 
         ls ./$dbname | grep -v "^metadata_"
     else 
         echo " No Tables Created Yet "
     fi
 }
 
+# ******************************** Drop Table FN ********************************
 drop_table() {
     while true
     do
@@ -147,7 +151,7 @@ drop_table() {
                     echo "Table '$tbname' dropped successfully."
                     break
                 else
-                    echo "Table '$tbname' not found! Enter a valid table name."
+                    echo "Table not found! Enter a valid table name."
                 fi
                 ;;
             *)
@@ -157,6 +161,7 @@ drop_table() {
     done
 }
 
+# ******************************** Delete Table FN ********************************
 delete_from_table(){
     while true
     do
@@ -172,99 +177,105 @@ delete_from_table(){
         read -p "Enter name of table to delete from: " tbname
         case $tbname in
             *[!\ \/\\\*\-\+\#\$\%\^\&\*0-9]*) 
-                if [[ -f "./$dbname/$tbname" ]]
+                if [[ -f "./$dbname/$tbname" ]] 
                 then
-                    echo "Choose Delete option:"
-                    select opt in "Delete All" "Delete Row"
-                    do
-                        case $opt in
-                            "Delete All")
-                                if [ "$(wc -l < "./$dbname/$tbname")" -gt 0 ]
-                                then
-                                    > "./$dbname/$tbname"
-                                    echo "All data deleted from table '$tbname'."
-                                else
-                                    echo "Table '$tbname' is already empty."
-                                fi
-                                break
-                                ;;
-
-                            "Delete Row")
-                                echo "Available columns in table '$tbname':"
-                                awk -F: '{print NR ". " $1}' "./$dbname/metadata_$tbname"
-
-                                while true
-                                do
-                                    read -p "Enter column name: " colname
-                                    if ! validate_name "$colname" || [[ "$colname" =~ [[:space:]] ]] 
+                    if [[ -s ./$dbname/metadata_$tbname ]] && [[ -s ./$dbname/$tbname ]]
+                    then
+                        echo "Choose Delete option:"
+                        select opt in "Delete All" "Delete Row"
+                        do
+                            case $opt in
+                                "Delete All")
+                                    if [ "$(wc -l < "./$dbname/$tbname")" -gt 0 ]
                                     then
-                                        echo "Invalid Column Name, Enter a Valid Name."
-                                        continue
+                                        > "./$dbname/$tbname"
+                                        echo "All data deleted from table '$tbname'."
+                                    else
+                                        echo "Table '$tbname' is already empty."
                                     fi
-                                    
-                                    # Check if the column exists in the metadata
-                                    if ! grep -q "^$colname:" "./$dbname/metadata_$tbname"
-                                    then
-                                        echo "Column '$colname' does not exist in table '$tbname'."
-                                        continue
-                                    fi
-                                    
-                                    # Get the type of the column from the metadata file
-                                    coltype=$(awk -F: -v colname="$colname" '$1 == colname {print $2}' "./$dbname/metadata_$tbname")
                                     break
-                                done
-                                
-                                while true
-                                do
-                                    read -p "Enter value of $colname to delete: " value
+                                    ;;
 
-                                    # Check if the value exists in the table
-                                    if ! grep -q "\<$value\>" "./$dbname/$tbname"
-                                    then
-                                        echo "Value '$value' not found in table '$tbname'."
-                                        continue
-                                    fi
+                                "Delete Row")
+                                    echo "Available columns in table '$tbname':"
+                                    awk -F: '{print NR ". " $1}' "./$dbname/metadata_$tbname"
 
-                                    # Check if the value matches the column type
-                                    case $coltype in
-                                        int)
-                                            if [[ ! "$value" =~ ^[0-9]+$ ]]
-                                            then
-                                                echo "Invalid value. Expected an integer."
-                                                continue
-                                            fi
-                                            ;;
-                                        str)
-                                            if ! validate_name "$value" || [[ "$value" =~ [[:space:]] ]]
-                                            then
-                                                echo "Invalid value. Enter a valid string."
-                                                continue
-                                            fi
-                                            ;;
-                                        *)
-                                            echo "Unknown column type '$coltype'."
+                                    while true
+                                    do
+                                        read -p "Enter column name: " colname
+                                        if ! validate_name "$colname" || [[ "$colname" =~ [[:space:]] ]] 
+                                        then
+                                            echo "Invalid Column Name, Enter a Valid Name."
                                             continue
-                                            ;;
-                                    esac
+                                        fi
+                                        
+                                        # Check if the column exists in the metadata
+                                        if ! grep -q "^$colname:" "./$dbname/metadata_$tbname"
+                                        then
+                                            echo "Column '$colname' does not exist in table '$tbname'."
+                                            continue
+                                        fi
+                                        
+                                        # Get the type of the column from the metadata file
+                                        coltype=$(awk -F: -v colname="$colname" '$1 == colname {print $2}' "./$dbname/metadata_$tbname")
+                                        break
+                                    done
+                                    
+                                    while true
+                                    do
+                                        read -p "Enter value of $colname to delete: " value
+
+                                        # Check if the value exists in the table
+                                        if ! grep -q "\<$value\>" "./$dbname/$tbname"
+                                        then
+                                            echo "Value '$value' not found in table '$tbname'."
+                                            continue
+                                        fi
+
+                                        # Check if the value matches the column type
+                                        case $coltype in
+                                            int)
+                                                if [[ ! "$value" =~ ^[0-9]+$ ]]
+                                                then
+                                                    echo "Invalid value. Expected an integer."
+                                                    continue
+                                                fi
+                                                ;;
+                                            str)
+                                                if ! validate_name "$value" || [[ "$value" =~ [[:space:]] ]]
+                                                then
+                                                    echo "Invalid value. Enter a valid string."
+                                                    continue
+                                                fi
+                                                ;;
+                                            *)
+                                                echo "Unknown column type '$coltype'."
+                                                continue
+                                                ;;
+                                        esac
+                                        break
+                                    done
+
+                                    # Delete rows based on specified field and value
+                                    columns=$(awk -F ':' '{print $1}' "./$dbname/metadata_$tbname")
+                                    index=$(echo "$columns" | grep -wn "$colname" | cut -d: -f1)
+
+                                    awk -F ':' -v col="$index" -v val="$value" '
+                                        BEGIN { OFS=FS }
+                                        { if ($col != val) print $0 } ' "./$dbname/$tbname" > "./$dbname/$tbname.tmp" && mv "./$dbname/$tbname.tmp" "./$dbname/$tbname"
+                                    echo "Rows with '$colname = $value' deleted from table '$tbname'."
                                     break
-                                done
-
-                                # Delete rows based on specified field and value
-                                columns=$(awk -F ':' '{print $1}' "./$dbname/metadata_$tbname")
-                                index=$(echo "$columns" | grep -wn "$colname" | cut -d: -f1)
-
-                                awk -F ':' -v col="$index" -v val="$value" '
-                                    BEGIN { OFS=FS }
-                                    { if ($col != val) print $0 } ' "./$dbname/$tbname" > "./$dbname/$tbname.tmp" && mv "./$dbname/$tbname.tmp" "./$dbname/$tbname"
-                                echo "Rows with '$colname = $value' deleted from table '$tbname'."
-                                break
-                                ;;
-                            *)
-                                echo "Invalid choice. Choose 1 or 2."
-                                ;;
-                        esac
-                    done
-                    break
+                                    ;;
+                                *)
+                                    echo "Invalid choice. Choose 1 or 2."
+                                    ;;
+                            esac
+                        done
+                        break
+                    else
+                        echo "Metadata or data file is empty for table $tbname."
+                        break
+                    fi        
                 else
                     echo "Table '$tbname' not found! Enter a valid table name."
                 fi
@@ -276,14 +287,14 @@ delete_from_table(){
     done
 }
 
+# ******************************** Insert Table FN ********************************
 insert_into_table() {
-    
   echo "Available tables in $dbname"
   list_table 
   read -p "Enter table Name: " tbname
   echo "Selected table: $tbname"
 
-  if [[ -f ./$dbname/$tbname ]]
+  if [[ -f ./$dbname/$tbname ]] && [[ -s ./$dbname/metadata_$selected_tbname ]] 
   then
     record_values=()
     columns=($(cut -d ':' -f 1 ./$dbname/metadata_$tbname))
@@ -354,13 +365,12 @@ insert_into_table() {
     echo ${record_values:1} >> ./$dbname/$tbname
     echo "Data Entered Successfully"
   else
-    echo "Data file does not exist or is not accessible."
+    echo "Data or metadata file does not exist or is not accessible."
   fi
 }
 
-
+# ******************************** Select Table FN ********************************
 select_table(){
-
     echo "Choose the table you want to select from:"
     list_table
     while true
@@ -370,102 +380,108 @@ select_table(){
         then
             if [[ -f ./$dbname/$selected_tbname ]] 
             then
-                select choice in "Select * From $selected_tbname" "Select Column From $selected_tbname" "Select Row From $selected_tbname" " Back "
-                do
-                    case $REPLY in
-                        1)
-                            cat ./$dbname/$selected_tbname
-                            ;;
-                        2)
-                            echo "Selecting a column from $selected_tbname"
-                            max_col=$(cut -d ':' -f 1  ./$dbname/metadata_$selected_tbname | wc -l) 
-                            while true
-                            do
-                                echo "Available columns in $selected_tbname:"
-                                cut -d ':' -f 1  ./$dbname/metadata_$selected_tbname | cat -n
-                                read -p "Enter column number you want to select: " selected_col
-                                if ! [[ "$selected_col" =~ ^[0-9]+$ ]]
-                                then
-                                    echo "Invalid input, enter a number."
-                                    continue
-                                fi
-                                if [[ "$selected_col" -lt 1 || "$selected_col" -gt "$max_col" ]]
-                                then
-                                    echo "Column number is out of range. Please select a column between 1 and $max_col."
-                                    continue
-                                fi
-
-                                echo "Selected column $selected_col from $selected_tbname:"
-                                cut -d ':' -f "$selected_col" ./$dbname/$selected_tbname  
-                                echo "choose another choice"
-                                break
-                            done
-                            ;;
-                        3)
-                            echo "Selecting a column from $selected_tbname"
-                            max_col=$(cut -d ':' -f 1 ./$dbname/metadata_$selected_tbname | wc -l) 
-                            while true 
-                            do
-                                echo "Available columns in $selected_tbname:"
-                                cut -d ':' -f 1 ./$dbname/metadata_$selected_tbname | cat -n
-                                read -p "Enter column number you want to select: " selected_col
-                                if ! [[ "$selected_col" =~ ^[0-9]+$ ]]
-                                then
-                                    echo "Invalid input, enter a number."
-                                    continue
-                                fi
-                                if [[ "$selected_col" -lt 1 || "$selected_col" -gt "$max_col" ]]
-                                then
-                                    echo "Column number is out of range. Please select a column between 1 and $max_col."
-                                    continue
-                                fi
-
-                                type=$(cat -n ./$dbname/metadata_$selected_tbname | grep "^[[:space:]]*$selected_col" | cut -d ':' -f 2)
-                                read -p "Enter Value for column. Note: data type of column is $type: " selected_value
-
-                                if [[ "$type" == "str" ]]
-                                then 
-                                    if ! validate_name "$selected_value" || [[ "$selected_value" =~ [[:space:]] ]]
+                if [[ -s ./$dbname/metadata_$selected_tbname ]] && [[ -s ./$dbname/$selected_tbname ]]
+                then
+                    select choice in "Select * From $selected_tbname" "Select Column From $selected_tbname" "Select Row From $selected_tbname" " Back "
+                    do
+                        case $REPLY in
+                            1)
+                                cat ./$dbname/$selected_tbname
+                                echo
+                                ;;
+                            2)
+                                echo "Selecting a column from $selected_tbname"
+                                max_col=$(cut -d ':' -f 1  ./$dbname/metadata_$selected_tbname | wc -l) 
+                                while true
+                                do
+                                    echo "Available columns in $selected_tbname:"
+                                    cut -d ':' -f 1  ./$dbname/metadata_$selected_tbname | cat -n
+                                    read -p "Enter column number you want to select: " selected_col
+                                    if ! [[ "$selected_col" =~ ^[0-9]+$ ]]
                                     then
-                                        echo "Enter a valid string, shouldn't contain space or special character and shouldn't be empty."
+                                        echo "Invalid input, enter a number."
                                         continue
                                     fi
-                                elif [[ "$type" == "int" ]]
-                                then
-                                    if ! [[ "$selected_value" =~ ^[0-9]+$ ]] 
+                                    if [[ "$selected_col" -lt 1 || "$selected_col" -gt "$max_col" ]]
                                     then
-                                        echo "Enter a valid number, shouldn't be empty or containing space or special character."
+                                        echo "Column number is out of range. Please select a column between 1 and $max_col."
                                         continue
                                     fi
-                                else 
-                                    echo "Invalid input."
-                                    continue
-                                fi  
 
-                                matched_record=$(awk -F ':' -v col="$selected_col" -v val="$selected_value" '$col == val {print $0}' "./$dbname/$selected_tbname")
-                                if [ -n "$matched_record" ]
-                                then 
-                                    echo "matched record is:"
-                                    echo "$matched_record"
+                                    echo "Selected column $selected_col from $selected_tbname:"
+                                    cut -d ':' -f "$selected_col" ./$dbname/$selected_tbname  
                                     echo "choose another choice"
                                     break
-                                else
-                                    echo "no matched record existing"
-                                    echo "choose another choice"
-                                    break
-                                fi         
-                            done
- 
-                           ;;
-                        4) 
-                            tabel_menu
-                            ;;
-                        *)
-                            echo "Invalid option, please choose 1, 2, 3, or 4."
-                            ;;
-                    esac
-                done
-                break  
+                                done
+                                ;;
+                            3)
+                                echo "Selecting a column from $selected_tbname"
+                                max_col=$(cut -d ':' -f 1 ./$dbname/metadata_$selected_tbname | wc -l) 
+                                while true 
+                                do
+                                    echo "Available columns in $selected_tbname:"
+                                    cut -d ':' -f 1 ./$dbname/metadata_$selected_tbname | cat -n
+                                    read -p "Enter column number you want to select: " selected_col
+                                    if ! [[ "$selected_col" =~ ^[0-9]+$ ]]
+                                    then
+                                        echo "Invalid input, enter a number."
+                                        continue
+                                    fi
+                                    if [[ "$selected_col" -lt 1 || "$selected_col" -gt "$max_col" ]]
+                                    then
+                                        echo "Column number is out of range. Please select a column between 1 and $max_col."
+                                        continue
+                                    fi
+
+                                    type=$(cat -n ./$dbname/metadata_$selected_tbname | grep "^[[:space:]]*$selected_col" | cut -d ':' -f 2)
+                                    read -p "Enter Value for column. Note: data type of column is $type: " selected_value
+
+                                    if [[ "$type" == "str" ]]
+                                    then 
+                                        if ! validate_name "$selected_value" || [[ "$selected_value" =~ [[:space:]] ]]
+                                        then
+                                            echo "Enter a valid string, shouldn't contain space or special character and shouldn't be empty."
+                                            continue
+                                        fi
+                                    elif [[ "$type" == "int" ]]
+                                    then
+                                        if ! [[ "$selected_value" =~ ^[0-9]+$ ]] 
+                                        then
+                                            echo "Enter a valid number, shouldn't be empty or containing space or special character."
+                                            continue
+                                        fi
+                                    else 
+                                        echo "Invalid input."
+                                        continue
+                                    fi  
+
+                                    matched_record=$(awk -F ':' -v col="$selected_col" -v val="$selected_value" '$col == val {print $0}' "./$dbname/$selected_tbname")
+                                    if [ -n "$matched_record" ]
+                                    then 
+                                        echo "matched record is:"
+                                        echo "$matched_record"
+                                        echo "choose another choice"
+                                        break
+                                    else
+                                        echo "no matched record existing"
+                                        echo "choose another choice"
+                                        break
+                                    fi         
+                                done
+                                ;;
+                            4) 
+                                tabel_menu
+                                ;;
+                            *)
+                                echo "Invalid option, please choose 1, 2, 3, or 4."
+                                ;;
+                        esac
+                    done
+                    break
+                else
+                    echo "Metadata or data file is empty for table $selected_tbname."
+                    break
+                fi  
             else
                 echo "Data file does not exist or is not accessible."
             fi
@@ -475,6 +491,7 @@ select_table(){
     done
 }
 
+# ******************************** Update Table FN ********************************
 update_table(){
     echo "Choose the table you want to update:"
     list_table
@@ -671,7 +688,7 @@ update_table(){
     done
 }
 
-
+# ******************************** Back to Main Menu FN ********************************
 back_to_menu(){
     ./dbms.sh main_menu
     exit

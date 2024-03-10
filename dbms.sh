@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# ******************************** Create DB FN ********************************
 create_db() {
     read -p "Enter Database Name: " dbname
     if $( validate_name "$dbname" ) && ! [[ "$dbname" =~ [[:space:]] ]] 
@@ -16,13 +17,14 @@ create_db() {
     fi
 }
 
-
+# ******************************** List DB FN ********************************
 list_db() {
+    echo "Available Databases: "
     ls -F | grep /
 }
 
+# ******************************** Connect DB FN ********************************
 connect_db() {
-    
     read -p "Enter Database Name: " dbname
     if $( validate_name "$dbname" ) && ! [[ "$dbname" =~ [[:space:]] ]] 
     then
@@ -40,6 +42,7 @@ connect_db() {
     fi
 }
 
+# ******************************** Drop DB FN ********************************
 drop_db(){
     read -p "Enter Database Name: " dbname
     if $( validate_name "$dbname" ) && ! [[ "$dbname" =~ [[:space:]] ]]
@@ -56,13 +59,17 @@ drop_db(){
     fi
 }
 
+# ******************************** Validate Name FN ********************************
 # Ensures that the dbname is non zero length and not null
 validate_name() {
   [[ -n "$1" && "$1" =~ ^[a-zA-Z][a-zA-Z0-9_]*$ ]]
 }
 
-
+# ******************************** Main Menu FN ********************************
 main_menu(){
+    echo "*~~~~~~~~~~~~*~~~~~~~~~~~~*~~~~~~~~~~~~*~~~~~~~~~~~~*~~~~~~~~~~~~*~~~~~~~~~~~~*"
+    echo "                               Welcome to our DBMS                                   "
+    echo "*~~~~~~~~~~~~*~~~~~~~~~~~~*~~~~~~~~~~~~*~~~~~~~~~~~~*~~~~~~~~~~~~*~~~~~~~~~~~~*"
     select choice in "Create Database" "List Databases" "Connect To Databases" "Drop Database" "Exit"; 
     do
         case $REPLY in
