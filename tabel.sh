@@ -116,7 +116,12 @@ create_table() {
 }
 
 list_table(){
-    ls ./$dbname | grep -v "^metadata_"
+    if [  $(ls ./$dbname | grep -v "^metadata_" | wc -l ) -gt 0 ]
+    then 
+        ls ./$dbname | grep -v "^metadata_"
+    else 
+        echo " No Tables Created Yet "
+    fi
 }
 
 drop_table() {
@@ -150,15 +155,6 @@ drop_table() {
                 ;;
         esac
     done
-}
-
-select_table(){
-    echo "implement here"
-}
-
-
-update_table(){
-    echo "$dbname"
 }
 
 delete_from_table(){
@@ -281,71 +277,239 @@ delete_from_table(){
 }
 
 insert_into_table() {
-    echo "Available tables in $dbname"
-    list_table # call list_table function
-    read -p "Enter table Name: " tbname
-    echo "Selected table: $tbname"  
-    if [[ -f ./$dbname/$tbname ]]; then
-        record_values=()
-        columns=($(cut -d ':' -f 1 ./$dbname/metadata_$tbname))
-        constraints=($(cut -d ':' -f 2 ./$dbname/metadata_$tbname))
-        primary_keys=($(cut -d ':' -f 3 ./$dbname/metadata_$tbname))
+    
+  echo "Available tables in $dbname"
+  list_table 
+  read -p "Enter table Name: " tbname
+  echo "Selected table: $tbname"
 
-        for ((i=0; i<${#columns[@]}; i++))
-        do
-            field="${columns[$i]}"
-            while true
-            do
-                read -p "Enter $field Value: " value
-                
-                # Check if it's a primary key
-                if [[ "${primary_keys[$i]}" == "1" ]]
-                then
-                    if  [ $(grep -c "$value:" ./$dbname/$tbname) -gt 0 ]
-                    then
-                        echo "Primary key value already exists. Please enter a unique value."
-                        continue
-                    fi
-                fi
-                
-                # Check constraints
-                if [[ "${constraints[$i]}" == "int" ]]
-                then 
-                    if ! [[ "$value" =~ ^[0-9]+$ ]]
-                    then
-                        echo "Enter a valid number"
-                        continue
-                    fi
-                    
-                elif [[ "${constraints[$i]}" == "str" ]]
-                then 
-                    if ! validate_name "$value" || [[ "$value" =~ [[:space:]] ]]
-                    then
-                        echo "Enter a valid string, shouldn't contain space"
-                        continue
-                    fi
-                fi
-                
-                # If all checks pass, break out of the loop
-                break
-            done
-            
-            record_values+=":$value"
-        done  
-        echo ${record_values:1} >> ./$dbname/$tbname
-        echo "Data Entered Successfully"
-    else
-        echo "Data file does not exist or is not accessible."
-    fi
+  if [[ -f ./$dbname/$tbname ]]
+  then
+    record_values=()
+    columns=($(cut -d ':' -f 1 ./$dbname/metadata_$tbname))
+    constraints=($(cut -d ':' -f 2 ./$dbname/metadata_$tbname))
+    primary_keys=($(cut -d ':' -f 3 ./$dbname/metadata_$tbname))
+
+    for (( i=0; i<${#columns[@]}; i++ ))
+    do
+      field="${columns[$i]}"
+      while true
+      do
+        read -p "Enter $field Value: " value
+
+        value=${value% }
+        if [[ "${constraints[$i]}" == "int" ]]
+        then
+          if ! [[ "$value" =~ ^[0-9]+$ ]]
+          then
+            echo "Enter a valid number , shouldn't be empty or containing space or special character"
+            continue
+          fi
+
+        elif [[ "${constraints[$i]}" == "str" ]]
+        then
+          if ! validate_name "$value" || [[ "$value" =~ [[:space:]] ]]
+          then
+            echo "Enter a valid string, shouldn't contain space or special character and shouldn't be an empty"
+            continue
+          fi
+        fi
+
+        if [[ "${primary_keys[$i]}" == "1" && "${constraints[$i]}" == "int" ]]
+        then
+          if ! [[ "$value" =~ ^[1-9][0-9]*$ ]]
+          then
+            echo "Primary key value should be a positive non-zero integer."
+            continue
+          fi
+
+          if grep -qw "$value" ./$dbname/$tbname
+          then
+            echo "Primary key value already exists. Please enter a unique value."
+            continue
+          fi
+        fi
+
+        if [[ "${primary_keys[$i]}" == "1" && "${constraints[$i]}" == "str" ]]
+        then
+          if [[ -z "$value" ]] || [[ "$value" =~ [Nn][Uu][Ll][Ll] ]]
+          then
+            echo "String value cannot be null."
+            continue
+          fi
+
+          if grep -qw "$value" ./$dbname/$tbname
+          then
+            echo "Primary key value already exists. Please enter a unique value."
+            continue
+          fi
+        fi
+
+        break
+      done
+
+      record_values+=":$value"
+    done
+
+    echo ${record_values:1} >> ./$dbname/$tbname
+    echo "Data Entered Successfully"
+  else
+    echo "Data file does not exist or is not accessible."
+  fi
 }
 
 
 select_table(){
-    echo "implement here"
+
+    echo "Choose the table you want to select from:"
+    list_table
+    while true
+    do
+        read -p "Please enter your choice " selected_tbname
+        if validate_name "$selected_tbname" && ! [[ "$selected_tbname" =~ [[:space:]] ]] 
+        then
+            if [[ -f ./$dbname/$selected_tbname ]] 
+            then
+                select choice in "Select * From $selected_tbname" "Select Column From $selected_tbname" "Select Row From $selected_tbname" " Back "
+                do
+                    case $REPLY in
+                        1)
+                            cat ./$dbname/$selected_tbname
+                            ;;
+                        2)
+                            echo "Selecting a column from $selected_tbname"
+                            max_col=$(cut -d ':' -f 1  ./$dbname/metadata_$selected_tbname | wc -l) 
+                            while true
+                            do
+                                echo "Available columns in $selected_tbname:"
+                                cut -d ':' -f 1  ./$dbname/metadata_$selected_tbname | cat -n
+                                read -p "Enter column number you want to select: " selected_col
+                                if ! [[ "$selected_col" =~ ^[0-9]+$ ]]
+                                then
+                                    echo "Invalid input, enter a number."
+                                    continue
+                                fi
+                                if [[ "$selected_col" -lt 1 || "$selected_col" -gt "$max_col" ]]
+                                then
+                                    echo "Column number is out of range. Please select a column between 1 and $max_col."
+                                    continue
+                                fi
+
+                                echo "Selected column $selected_col from $selected_tbname:"
+                                cut -d ':' -f "$selected_col" ./$dbname/$selected_tbname  
+                                echo "choose another choice"
+                                break
+                            done
+                            ;;
+                        3)
+                            echo "Selecting a column from $selected_tbname"
+                            max_col=$(cut -d ':' -f 1 ./$dbname/metadata_$selected_tbname | wc -l) 
+                            while true 
+                            do
+                                echo "Available columns in $selected_tbname:"
+                                cut -d ':' -f 1 ./$dbname/metadata_$selected_tbname | cat -n
+                                read -p "Enter column number you want to select: " selected_col
+                                if ! [[ "$selected_col" =~ ^[0-9]+$ ]]
+                                then
+                                    echo "Invalid input, enter a number."
+                                    continue
+                                fi
+                                if [[ "$selected_col" -lt 1 || "$selected_col" -gt "$max_col" ]]
+                                then
+                                    echo "Column number is out of range. Please select a column between 1 and $max_col."
+                                    continue
+                                fi
+
+                                type=$(cat -n ./$dbname/metadata_$selected_tbname | grep "^[[:space:]]*$selected_col" | cut -d ':' -f 2)
+                                read -p "Enter Value for column. Note: data type of column is $type: " selected_value
+
+                                if [[ "$type" == "str" ]]
+                                then 
+                                    if ! validate_name "$selected_value" || [[ "$selected_value" =~ [[:space:]] ]]
+                                    then
+                                        echo "Enter a valid string, shouldn't contain space or special character and shouldn't be empty."
+                                        continue
+                                    fi
+                                elif [[ "$type" == "int" ]]
+                                then
+                                    if ! [[ "$selected_value" =~ ^[0-9]+$ ]] 
+                                    then
+                                        echo "Enter a valid number, shouldn't be empty or containing space or special character."
+                                        continue
+                                    fi
+                                else 
+                                    echo "Invalid input."
+                                    continue
+                                fi  
+
+                                matched_record=$(awk -F ':' -v col="$selected_col" -v val="$selected_value" '$col == val {print $0}' "./$dbname/$selected_tbname")
+                                if [ -n "$matched_record" ]
+                                then 
+                                    echo "matched record is:"
+                                    echo "$matched_record"
+                                    echo "choose another choice"
+                                    break
+                                else
+                                    echo "no matched record existing"
+                                    echo "choose another choice"
+                                    break
+                                fi         
+                            done
+ 
+                           ;;
+                        4) 
+                            tabel_menu
+                            ;;
+                        *)
+                            echo "Invalid option, please choose 1, 2, 3, or 4."
+                            ;;
+                    esac
+                done
+                break  
+            else
+                echo "Data file does not exist or is not accessible."
+            fi
+        else
+            echo "Table name is invalid: it can't be a regex, be empty, or contain spaces."
+        fi
+    done
 }
 
 update_table(){
-    echo "$dbname"
+     echo "Choose the table you want to select from:"
+    list_table
+    while true
+    do
+        read -p "Please enter your choice " selected_tbname
+        if validate_name "$selected_tbname" && ! [[ "$selected_tbname" =~ [[:space:]] ]] 
+        then
+            if [[ -f ./$dbname/$selected_tbname ]] 
+            then
+                select choice in "Update cell in table $selected_tbname" "Update Column in table $selected_tbname"  " Back "
+                do
+                    case $REPLY in
+                        1)
+                            echo "implement here"
+                            ;;
+                        2)
+                            echo "implement here"
+                            ;;
+                        3)
+                            tabel_menu
+                           ;;
+                        *)
+                            echo "Invalid option, please choose 1, 2 or 3."
+                            ;;
+                    esac
+                done
+                break  
+            else
+                echo "Data file does not exist or is not accessible."
+            fi
+        else
+            echo "Table name is invalid: it can't be a regex, be empty, or contain spaces."
+        fi
+    done
 }
 
 
@@ -355,4 +519,3 @@ back_to_menu(){
 }
 
 tabel_menu
-

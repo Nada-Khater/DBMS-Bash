@@ -22,6 +22,7 @@ list_db() {
 }
 
 connect_db() {
+    
     read -p "Enter Database Name: " dbname
     if $( validate_name "$dbname" ) && ! [[ "$dbname" =~ [[:space:]] ]] 
     then
