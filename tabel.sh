@@ -666,7 +666,7 @@ update_table(){
                                 done
                                 ;;
                             3)
-                                table_menu
+                                tabel_menu
                                 ;;
                             *)
                                 echo "Invalid option, please choose 1, 2, or 3."
